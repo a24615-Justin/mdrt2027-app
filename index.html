@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MDRT 2027 導師計畫</title>
+  <meta name="description" content="2027 MDRT 導師計畫追蹤平台">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#14213D">
+  <link rel="icon" type="image/png" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="MDRT 2027">
+  <style>
+    html, body { margin: 0; height: 100%; background: #14213D; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; overflow: hidden; }
+    #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #f1f5f9; }
+    .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #14213D; color: #F5F7FB; text-align: center; padding: 24px; z-index: 5; }
+    .overlay img { width: 96px; height: 96px; border-radius: 22px; }
+    .overlay p { margin: 0; font-size: 16px; color: #C9D6F2; }
+    .spin { width: 28px; height: 28px; border: 3px solid rgba(255,255,255,.25); border-top-color: #E8A317; border-radius: 50%; animation: s 0.9s linear infinite; }
+    @keyframes s { to { transform: rotate(360deg); } }
+    .btn { border: 0; border-radius: 10px; padding: 10px 18px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    #install { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 10; background: #FFFFFF; color: #14213D; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); padding: 14px 16px; display: flex; align-items: center; gap: 12px; max-width: 520px; margin: 0 auto; }
+    #install img { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
+    #install .txt { flex: 1; font-size: 14px; line-height: 1.5; }
+    #install b { font-size: 15px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <iframe id="app" title="MDRT 2027 導師計畫追蹤平台" allow="clipboard-write"></iframe>
+
+  <div id="loading" class="overlay">
+    <img src="icons/icon-192.png" alt="">
+    <div class="spin"></div>
+    <p>平台載入中…</p>
+  </div>
+
+  <div id="offline" class="overlay" hidden>
+    <img src="icons/icon-192.png" alt="">
+    <p style="font-size:18px;color:#F5F7FB;font-weight:700">目前沒有網路連線</p>
+    <p>連上網路後會自動重新載入</p>
+    <button class="btn" style="background:#E8A317;color:#14213D" onclick="location.reload()">重新整理</button>
+  </div>
+
+  <div id="install" hidden>
+    <img src="icons/icon-192.png" alt="">
+    <div class="txt" id="installText"></div>
+    <button class="btn" id="installBtn" style="background:#2B4C8C;color:#fff" hidden>安裝</button>
+    <button class="btn" id="installClose" style="background:#F1F5F9;color:#475569">稍後</button>
+  </div>
+
+  <script>
+    /* ====== 設定：Apps Script 部署網址（重新部署請選「新版本」，網址就不會變） ====== */
+    const APP_URL = 'https://script.google.com/macros/s/AKfycby0v7t33mqNH0OLmKTcLnKnFArED4a9Ry5CQEjwySJPznz8gOAGVbLiegDGgiw67JO8/exec';
+    /* 只接受來自 Apps Script 網頁的訊息 */
+    const APP_ORIGIN_OK = origin => {
+      try { const h = new URL(origin).hostname; return h === 'script.google.com' || h.endsWith('.googleusercontent.com'); } catch (e) { return false; }
+    };
+
+    const TOKEN_KEY = 'mdrt2027_wrapper_token';
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+      del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+    };
+
+    // 代管登入狀態：iPhone 的 Safari 會限制嵌入網頁的儲存空間，由外殼代為保存「記住我」
+    window.addEventListener('message', e => {
+      if (!APP_ORIGIN_OK(e.origin) || !e.data || typeof e.data !== 'object') return;
+      const d = e.data;
+      if (d.type === 'mdrt-hello' && e.source) {
+        e.source.postMessage({ type: 'mdrt-token', token: store.get(TOKEN_KEY) || '' }, e.origin);
+      } else if (d.type === 'mdrt-save-token' && typeof d.token === 'string' && /^[a-f0-9]{32,128}$/.test(d.token)) {
+        store.set(TOKEN_KEY, d.token);
+      } else if (d.type === 'mdrt-clear-token') {
+        store.del(TOKEN_KEY);
+      }
+    });
+
+    // 載入平台
+    const frame = document.getElementById('app');
+    const loading = document.getElementById('loading');
+    const offline = document.getElementById('offline');
+    function load() {
+      if (!navigator.onLine) { offline.hidden = false; loading.hidden = true; return; }
+      offline.hidden = true;
+      loading.hidden = false;
+      frame.src = APP_URL;
+    }
+    frame.addEventListener('load', () => { if (frame.src) setTimeout(() => { loading.hidden = true; }, 300); });
+    window.addEventListener('online', () => { if (!offline.hidden) load(); });
+    window.addEventListener('offline', () => { offline.hidden = false; });
+    load();
+
+    // 安裝提示（已安裝或按過「稍後」就不再出現；7 天後再提醒）
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const snoozed = Number(store.get('mdrt2027_install_snooze') || 0) > Date.now();
+    const box = document.getElementById('install');
+    const txt = document.getElementById('installText');
+    const btn = document.getElementById('installBtn');
+    document.getElementById('installClose').onclick = () => {
+      box.hidden = true;
+      store.set('mdrt2027_install_snooze', String(Date.now() + 7 * 86400000));
+    };
+    let deferred = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferred = e;
+      if (isStandalone || snoozed) return;
+      txt.innerHTML = '<b>安裝到手機或電腦</b><br>下次從主畫面一鍵開啟，全螢幕使用';
+      btn.hidden = false;
+      box.hidden = false;
+    });
+    btn.onclick = async () => {
+      if (!deferred) return;
+      deferred.prompt();
+      await deferred.userChoice;
+      deferred = null;
+      box.hidden = true;
+    };
+    window.addEventListener('appinstalled', () => { box.hidden = true; });
+    const ua = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS && !isStandalone && !snoozed) {
+      const inSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|Line\//.test(ua);
+      txt.innerHTML = inSafari
+        ? '<b>加入主畫面</b><br>點下方「分享」<svg width="16" height="18" viewBox="0 0 16 18" style="vertical-align:-3px;margin:0 2px" aria-label="分享圖示"><path d="M8 1v10M4.5 4.5 8 1l3.5 3.5" fill="none" stroke="#2B4C8C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7H2.5v9.5h11V7H11" fill="none" stroke="#2B4C8C" stroke-width="1.8" stroke-linejoin="round"/></svg>，再選「加入主畫面」'
+        : '<b>請用 Safari 開啟</b><br>才能加入主畫面（LINE 內建瀏覽器請點右上角，選「以 Safari 開啟」）';
+      box.hidden = false;
+    }
+
+    // 離線外殼快取
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+    }
+  </script>
+</body>
+</html>
