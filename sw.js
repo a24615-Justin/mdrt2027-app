@@ -1,5 +1,5 @@
 // MDRT 2027 外殼的 Service Worker：只快取外殼本身，平台資料一律即時從 Apps Script 取得
-const CACHE = 'mdrt2027-shell-v1';
+const CACHE = 'mdrt2027-shell-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'];
 
 self.addEventListener('install', e => {
